@@ -1,0 +1,6 @@
+---
+- name: install lets-encrypt prerequisites
+  hosts: all
+  remote_user: root
+  roles:
+    - lets-encrypt

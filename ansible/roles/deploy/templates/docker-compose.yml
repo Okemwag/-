@@ -1,0 +1,10 @@
+services:
+  app:
+    image: "{{ role }}:{{ git_clone.after }}"
+    container_name: "{{ role }}"
+    build: "{{ build_path }}"
+    ports:
+      - "{{ host_port }}:{{ container_port }}"
+    restart: always
+    env_file:
+      - "{{ env_filename }}"

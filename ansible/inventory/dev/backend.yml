@@ -1,0 +1,29 @@
+# Backend service inventory configuration for development environment
+# This file defines the configuration for Java backend services
+
+all:
+  hosts:
+    app1:
+      ansible_host: # IP address of the host
+
+  vars:
+    role: backend
+    type: java
+    repository: # Repository URL for the artifact  
+    branch: main
+
+    artifact: backend-0.0.1-SNAPSHOT.jar
+    artifact_for_docker: backend.jar
+
+    container_port: 9000
+    host_port: 9002
+    hostname: # Hostname of the server  
+
+    health_check_path: /actuator/health
+    health_check_port: 9002
+
+    monitoring_enabled: true
+    prometheus_port: 9090
+
+    backup_enabled: true
+    backup_schedule: "0 0 * * *" # Daily at midnight

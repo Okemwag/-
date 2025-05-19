@@ -1,0 +1,5 @@
+---
+revision: master
+build_directory: "{{ ansible_env.HOME }}/build"
+role:
+build_log_name: build.log

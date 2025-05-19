@@ -1,0 +1,16 @@
+---
+- name: install nginx
+  package:
+    name: nginx
+    state: present
+
+- name: set selinux flag to allow proxying to local services
+  shell: setsebool -P httpd_can_network_connect 1
+
+# Certbot requires the nginx conf to be prefixed with the same FQDN that needs SSL.
+- name: generate reverse proxy configuration
+  template:
+    src: nginx-proxy.conf
+    dest: "/etc/nginx/conf.d/{{ hostname }}.conf"
+  notify:
+    - restart nginx

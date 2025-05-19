@@ -1,0 +1,37 @@
+---
+# Application Settings
+app_name: react-springboot-app
+app_env: development
+app_domain: "{{ inventory_hostname }}"
+app_port: 8080
+
+# Docker Settings
+docker_compose_version: "1.29.2"
+docker_registry: ""  
+
+# Java Settings
+java_version: "1.8.0"
+maven_version: "latest"
+
+# Python Settings
+python_version: "3.8"
+pip3_path: "/usr/bin/pip3"
+
+# Nginx Settings
+nginx_config_path: "/etc/nginx"
+nginx_sites_enabled: "{{ nginx_config_path }}/sites-enabled"
+nginx_sites_available: "{{ nginx_config_path }}/sites-available"
+
+# SSL Settings
+ssl_email: "yasindusanjeewa8@gmail.com"
+ssl_staging: false  # Set to true for testing
+ssl_cert_path: "/etc/letsencrypt/live/{{ app_domain }}"
+
+# Backup Settings
+backup_enabled: true
+backup_retention_days: 7
+backup_path: "/var/backups/{{ app_name }}"
+
+# Monitoring Settings
+monitoring_enabled: true
+monitoring_port: 9100 

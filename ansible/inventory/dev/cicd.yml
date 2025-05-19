@@ -1,0 +1,4 @@
+all:
+  hosts:
+    cicd:
+      ansible_host: # IP address of the host 

@@ -1,0 +1,5 @@
+---
+revision: development
+env_file_bucket: dev-secrets #change this to the name of your secrets bucket
+pip3_path: /usr/local/bin/pip3
+env: dev

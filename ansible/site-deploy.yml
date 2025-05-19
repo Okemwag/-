@@ -1,0 +1,25 @@
+---
+- name: Deploy React-SpringBoot Application
+  hosts: all
+  remote_user: root
+  gather_facts: yes
+  
+  pre_tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+      tags: [always]
+
+  roles:
+    - { role: prerequisites, tags: ['setup', 'prerequisites'] }
+    - { role: deploy, tags: ['deploy'] }
+    - { role: reverse-proxy, tags: ['proxy', 'nginx'] }
+    - { role: lets-encrypt, tags: ['ssl', 'security'] }
+
+  vars_files:
+    - vars/main.yml
+
+  environment:
+    DOCKER_CLIENT_TIMEOUT: 120
+    COMPOSE_HTTP_TIMEOUT: 120

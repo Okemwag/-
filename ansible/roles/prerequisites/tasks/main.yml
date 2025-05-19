@@ -1,0 +1,126 @@
+---
+- name: Install system packages
+  package:
+    name:
+      - git
+      - curl
+      - wget
+      - unzip
+      - apt-transport-https
+      - ca-certificates
+      - gnupg-agent
+      - software-properties-common
+    state: present
+  tags: [packages]
+
+- name: Install Python and pip
+  block:
+    - name: Install Python {{ python_version }}
+      package:
+        name: "python{{ python_version | regex_replace('\\.[0-9]+$', '') }}"
+        state: present
+
+    - name: Install pip3
+      package:
+        name: python3-pip
+        state: present
+
+    - name: Update pip to latest version
+      pip:
+        name: pip
+        state: latest
+        executable: "{{ pip3_path }}"
+  rescue:
+    - name: Python installation failed
+      debug:
+        msg: "Python installation failed. Please check system requirements."
+  tags: [python]
+
+- name: Install Python modules
+  pip:
+    name: "{{ item }}"
+    state: present
+    executable: "{{ pip3_path }}"
+  loop:
+    - docker
+    - docker-compose
+    - s3cmd
+    - requests
+    - boto3
+  tags: [python-modules]
+
+- name: Install Docker
+  block:
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install Docker packages
+      package:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+  rescue:
+    - name: Docker installation failed
+      debug:
+        msg: "Docker installation failed. Please check system requirements."
+  tags: [docker]
+
+- name: Install Docker Compose
+  block:
+    - name: Download Docker Compose
+      get_url:
+        url: "https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-{{ ansible_system }}-{{ ansible_architecture }}"
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+        force: yes
+  rescue:
+    - name: Docker Compose installation failed
+      debug:
+        msg: "Docker Compose installation failed. Please check system requirements."
+  tags: [docker-compose]
+
+- name: Install Java and Maven
+  block:
+    - name: Install Java {{ java_version }}
+      package:
+        name: "java-{{ java_version }}-openjdk"
+        state: present
+
+    - name: Install Maven
+      package:
+        name: maven
+        state: present
+  rescue:
+    - name: Java/Maven installation failed
+      debug:
+        msg: "Java/Maven installation failed. Please check system requirements."
+  tags: [java]
+
+- name: Configure system limits
+  pam_limits:
+    domain: '*'
+    limit_type: "{{ item.limit_type }}"
+    limit_item: "{{ item.limit_item }}"
+    value: "{{ item.value }}"
+  loop:
+    - { limit_type: '-', limit_item: 'nofile', value: '65536' }
+    - { limit_type: '-', limit_item: 'nproc', value: '65536' }
+  tags: [system]
+
+- name: Enable and start Docker service
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+  tags: [docker]

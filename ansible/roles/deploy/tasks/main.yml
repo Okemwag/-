@@ -1,0 +1,111 @@
+---
+- name: generate paths
+  set_fact:
+    build_path: "{{ build_directory }}/{{ role }}"
+    env_filename: "{{ env }}.{{ role }}.env"
+
+- name: ensure that the directory structure is present
+  file:
+    path: "{{ build_path }}"
+    state: directory
+    owner: root
+    group: root
+
+- name: clone the repository
+  git:
+    repo: "{{ repository }}"
+    dest: "{{ build_path }}"
+    force: true
+  register: git_clone
+
+- name: checkout to branch
+  shell:
+    cmd: "git checkout {{ revision }}"
+    chdir: "{{ build_path }}"
+
+- name: fetch environment variable file from spaces
+  block:
+    - name: download environment variable file as-is
+      shell:
+        cmd: s3cmd get s3://{{ env_file_bucket }}/{{ env_filename }} {{ env_filename }} --force
+        chdir: "{{ build_path }}"
+    - name: rename environment variable file
+      shell:
+        cmd: cp {{ env_filename }} .env
+        chdir: "{{ build_path }}"
+
+- name: generate docker-compose file
+  template:
+    src: docker-compose.yml
+    dest: "{{ build_path }}/docker-compose.yml"
+
+- name: build jar artifact
+  when: type == 'java'
+  block:
+    - name: maven build
+      shell:
+        chdir: "{{ build_path }}"
+        cmd: |
+          # Export the env vars in the file so that maven build utilise them,
+          # especially for SPRING_DATA_SOURCE stuff...
+          while IFS= read -r line; do
+              export $line || true
+          done < {{ env_filename }} && \
+          mvn clean compile install
+    - name: rename artifact
+      copy:
+        src: "{{ build_path }}/target/{{ artifact }}"
+        remote_src: true
+        dest: "{{ build_path }}/target/{{ artifact_for_docker }}"
+
+- name: remove old service(s)
+  docker_compose:
+    project_src: "{{ build_path }}"
+    files:
+      - docker-compose.yml
+    state: absent
+
+- name: wait for old service(s) to stop completely
+  pause:
+    minutes: 1
+
+- name: create new version of service(s)
+  docker_compose:
+    project_src: "{{ build_path }}"
+    files:
+      - docker-compose.yml
+    build: true
+    nocache: true
+    debug: true
+    remove_orphans: true
+
+- name: export build info to log file
+  shell:
+    cmd: |
+      printf "Latest Build Time --- $(date)\n" > {{ build_log_name }}
+      printf "Git Branch ---------- $(git rev-parse --abbrev-ref HEAD)\n" >> {{ build_log_name }}
+      printf "Git Commit ID ------- $(git rev-parse HEAD)\n" >> {{ build_log_name }}
+      printf "\nDocker Info:\n$(docker-compose ps)\n" >> {{ build_log_name }}
+    chdir: "{{ build_path }}"
+
+- name: remove older versions of the image and volumes
+  docker_prune:
+    volumes: true
+    images: true
+    images_filters:
+      dangling: true
+
+- name: remove environment variable file from local storage
+  file:
+    path: "{{ build_path }}/{{ env_filename }}"
+    state: absent
+
+- name: display build information
+  block:
+    - name: retrieve information
+      slurp:
+        src: "{{ build_path }}/{{ build_log_name }}"
+      register: build_info
+    - name: display information
+      debug:
+        msg: "{{ (build_info.content | b64decode).split('\n') }}"

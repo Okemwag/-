@@ -1,0 +1,10 @@
+# Exclude this file from encryption.
+.gitattributes !filter !diff
+
+# Global scope for key/pem files.
+*.pem filter=git-crypt diff=git-crypt
+*.key filter=git-crypt diff=git-crypt
+
+# Terraform files that are most likely contain secrets.
+data.tf filter=git-crypt diff=git-crypt
+provider.tf filter=git-crypt diff=git-crypt
